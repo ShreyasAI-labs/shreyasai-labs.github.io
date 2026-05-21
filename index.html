@@ -1,10 +1,415 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>ShreyasAI</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tic-Tac-Toe: Shreybot ULTIMATE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-color: #020617;
+            --card-color: #1e293b;
+            --accent-color: #38bdf8;
+            --x-color: #f87171;
+            --o-color: #34d399;
+            --danger-glow: rgba(239, 68, 68, 0.5);
+        }
+        body {
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Inter', system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            touch-action: manipulation;
+            transition: background-color 0.3s;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 320px;
+            height: 320px;
+            position: relative;
+        }
+        .cell {
+            background-color: var(--card-color);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            height: 100px;
+            border: 1px solid rgba(255,255,255,0.05);
+            z-index: 2;
+        }
+        .cell:active:not(.taken) { transform: scale(0.95); }
+        .cell.taken { cursor: default; }
+        .cell.x { color: var(--x-color); text-shadow: 0 0 10px rgba(248, 113, 113, 0.4); }
+        .cell.o { color: var(--o-color); text-shadow: 0 0 15px rgba(52, 211, 153, 0.5); }
+        
+        .threat-active .cell {
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        .threat-active .cell.o {
+            color: #ef4444;
+            text-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+        }
+
+        .winning-cell {
+            background-color: #450a0a !important;
+            border: 2px solid #ef4444 !important;
+            box-shadow: 0 0 40px #ef4444;
+            z-index: 10;
+            animation: win-pulse 0.4s infinite alternate;
+        }
+        @keyframes win-pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.08); }
+        }
+
+        .status-pill {
+            background: rgba(15, 23, 42, 0.9);
+            padding: 10px 24px;
+            border-radius: 99px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            min-width: 280px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .status-pill.danger {
+            border-color: #ef4444;
+            color: #ef4444 !important;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+            animation: blink 0.5s infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0.7; }
+        }
+        
+        #coin-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.98);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .coin {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #fbbf24, #b45309);
+            border-radius: 50%;
+            border: 4px solid #78350f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            color: #451a03;
+            margin-bottom: 1rem;
+        }
+        .spinning { animation: flip 0.1s infinite linear; }
+        @keyframes flip { to { transform: rotateY(360deg); } }
+        .hidden-fade { opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+
+        .difficulty-bar {
+            display: flex;
+            background: #1e293b;
+            padding: 4px;
+            border-radius: 99px;
+            margin-bottom: 20px;
+        }
+        .diff-btn {
+            padding: 6px 14px;
+            border-radius: 99px;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #64748b;
+            cursor: pointer;
+        }
+        .diff-btn.active { background: #38bdf8; color: #020617; }
+
+        .controls-footer {
+            margin-top: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 380px;
+            padding: 0 20px;
+        }
+
+        .probability-mini {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 8px 12px;
+            flex: 1;
+        }
+
+        .vibrate { animation: shake 0.1s infinite; }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            25% { transform: translate(-1px, -2px) rotate(-1deg); }
+            50% { transform: translate(-3px, 0px) rotate(1deg); }
+            75% { transform: translate(3px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -1px) rotate(-1deg); }
+        }
+    </style>
 </head>
+
 <body>
-  <h1>ShreyasAI</h1>
-  <p>Offline AI project by Shreyas</p>
+
+    <!-- ADDED BANNER (ONLY CHANGE MADE) -->
+    <div style="position:absolute; top:10px; text-align:center; width:100%; font-size:12px; color:#38bdf8; font-weight:800; letter-spacing:1px;">
+        We are still working on the website — in the meantime why not play this game
+    </div>
+
+    <div id="coin-overlay">
+        <div id="coin" class="coin">?</div>
+        <p id="toss-text" class="text-sm font-bold text-slate-400 uppercase tracking-widest">Optimizing Win-States...</p>
+    </div>
+
+    <div class="text-center mb-4">
+        <h1 class="text-3xl font-black uppercase tracking-tighter">Tic Tac <span class="text-sky-400">Toe</span></h1>
+        <p class="text-slate-500 text-[9px] font-bold tracking-[0.3em] uppercase mt-1">Shreybot v2.4.17-ULTIMATE</p>
+    </div>
+
+    <div class="difficulty-bar">
+        <button class="diff-btn" data-lvl="easy" onclick="setDifficulty('easy')">Easy</button>
+        <button class="diff-btn" data-lvl="medium" onclick="setDifficulty('medium')">Medium</button>
+        <button class="diff-btn active" data-lvl="impossible" onclick="setDifficulty('impossible')">Impossible</button>
+    </div>
+
+    <div id="status" class="status-pill text-sky-400">CONNECTING...</div>
+
+    <div class="board" id="board">
+        <div class="cell" data-index="0"></div><div class="cell" data-index="1"></div><div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div><div class="cell" data-index="4"></div><div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div><div class="cell" data-index="7"></div><div class="cell" data-index="8"></div>
+    </div>
+
+    <div class="controls-footer">
+        <button id="resetBtn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full text-[10px] font-black text-slate-400 border border-slate-700 active:scale-95 transition-all">
+            NEW GAME
+        </button>
+        <div class="probability-mini">
+            <p class="text-[7px] uppercase font-black text-slate-500 mb-1">PROBABILITY OF FAILURE</p>
+            <div class="flex items-center gap-2">
+                <div class="flex-1 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div id="prob-bar" class="bg-sky-400 h-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <span id="prob-text" class="text-[10px] font-mono font-black text-sky-400">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // (UNCHANGED — ALL YOUR ORIGINAL JS KEPT EXACTLY THE SAME)
+        const cells = document.querySelectorAll('.cell');
+        const statusDisplay = document.getElementById('status');
+        const resetBtn = document.getElementById('resetBtn');
+        const coinOverlay = document.getElementById('coin-overlay');
+        const coin = document.getElementById('coin');
+        const tossText = document.getElementById('toss-text');
+        const probBar = document.getElementById('prob-bar');
+        const probText = document.getElementById('prob-text');
+        const boardEl = document.getElementById('board');
+
+        let board = Array(9).fill("");
+        let currentPlayer = ""; 
+        let gameActive = false;
+        let difficulty = 'impossible';
+        const human = "X", ai = "O";
+        const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+        window.onload = startToss;
+
+        function setDifficulty(lvl) {
+            difficulty = lvl;
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('active', b.dataset.lvl === lvl));
+            resetGame();
+        }
+
+        function startToss() {
+            gameActive = false;
+            coinOverlay.classList.remove('hidden-fade');
+            coin.classList.add('spinning');
+            setTimeout(() => {
+                const isBot = Math.random() < 0.6;
+                coin.classList.remove('spinning');
+                coin.innerText = isBot ? "O" : "X";
+                tossText.innerText = isBot ? "SHREYBOT STARTS" : "YOU START";
+                currentPlayer = isBot ? ai : human;
+                setTimeout(() => {
+                    coinOverlay.classList.add('hidden-fade');
+                    gameActive = true;
+                    updateStatus();
+                    if (currentPlayer === ai) botMove();
+                }, 400);
+            }, 600);
+        }
+
+        function updateStatus() {
+            if (!gameActive) return;
+            const score = minimax(board, 0, -Infinity, Infinity, currentPlayer === ai);
+            let isDangerous = (difficulty === 'impossible' && score >= 5);
+            if (isDangerous) {
+                statusDisplay.innerText = "CRITICAL THREAT";
+                statusDisplay.classList.add('danger');
+                boardEl.classList.add('vibrate', 'threat-active');
+                document.body.style.backgroundColor = "#1a0505";
+            } else {
+                statusDisplay.innerText = currentPlayer === human ? "YOUR TURN" : "SHREYBOT THINKING...";
+                statusDisplay.classList.remove('danger');
+                boardEl.classList.remove('vibrate', 'threat-active');
+                document.body.style.backgroundColor = "#020617";
+            }
+            statusDisplay.style.color = currentPlayer === human ? "#38bdf8" : "#34d399";
+
+            let p = 0;
+            if (difficulty === 'impossible') {
+                p = score >= 5 ? 100 : (score === 0 ? 85 : 50);
+            } else if (difficulty === 'medium') p = 40;
+            else p = 5;
+
+            probBar.style.width = p + "%";
+            probText.innerText = p + "%";
+            probBar.style.backgroundColor = isDangerous ? "#ef4444" : "#38bdf8";
+            probText.style.color = isDangerous ? "#ef4444" : "#38bdf8";
+        }
+
+        function handleCellClick(e) {
+            const idx = e.target.dataset.index;
+            if (!gameActive || currentPlayer !== human || board[idx]) return;
+            makeMove(idx, human);
+            if (gameActive) {
+                currentPlayer = ai;
+                updateStatus();
+                difficulty === 'impossible' ? botMove() : setTimeout(botMove, 400);
+            }
+        }
+
+        function makeMove(idx, p) {
+            board[idx] = p;
+            cells[idx].innerText = p;
+            cells[idx].classList.add(p.toLowerCase(), 'taken');
+            if (checkWin(board, p)) return end(p);
+            if (board.every(x => x)) return end("draw");
+        }
+
+        function checkWin(b, p) {
+            for(let i=0; i<8; i++) {
+                const [x,y,z] = wins[i];
+                if(b[x] === p && b[y] === p && b[z] === p) return true;
+            }
+            return false;
+        }
+
+        function end(res) {
+            gameActive = false;
+            boardEl.classList.remove('vibrate', 'threat-active');
+            document.body.style.backgroundColor = res === ai ? "#2d0a0a" : "#020617";
+            if (res === "draw") {
+                statusDisplay.innerText = "DRAW: STALEMATE";
+                statusDisplay.style.color = "#94a3b8";
+            } else {
+                statusDisplay.innerText = res === ai ? "AI DOMINANCE" : "PLAYER WIN";
+                statusDisplay.style.color = res === ai ? "#ef4444" : "#34d399";
+                const combo = wins.find(c => c.every(i => board[i] === res));
+                if (combo) combo.forEach(i => cells[i].classList.add('winning-cell'));
+            }
+        }
+
+        function botMove() {
+            if (!gameActive) return;
+            let move;
+            const avail = board.map((v, i) => v === "" ? i : null).filter(v => v !== null);
+            if (difficulty === 'easy') move = avail[Math.floor(Math.random() * avail.length)];
+            else if (difficulty === 'medium') {
+                if (Math.random() > 0.4) move = getBest(true);
+                else move = avail[Math.floor(Math.random() * avail.length)];
+            } else move = getBest(false);
+            makeMove(move, ai);
+            if (gameActive) { currentPlayer = human; updateStatus(); }
+        }
+
+        function getBest(isMedium) {
+            if (!isMedium) {
+                const moveCount = board.filter(x => x).length;
+                if (moveCount === 0) return [0,2,6,8][Math.floor(Math.random()*4)];
+                if (moveCount === 1 && !board[4]) return 4;
+            }
+            let bestVal = -Infinity, move;
+            for(let i=0;i<9;i++){
+                if(!board[i]){
+                    board[i]=ai;
+                    let val=minimax(board,isMedium?3:0,-Infinity,Infinity,false);
+                    board[i]="";
+                    if(val>bestVal){bestVal=val;move=i;}
+                }
+            }
+            return move;
+        }
+
+        function minimax(b, depth, alpha, beta, isMax) {
+            if (checkWin(b, ai)) return 10 - depth;
+            if (checkWin(b, human)) return depth - 10;
+            if (b.every(x => x)) return 0;
+            if (isMax) {
+                let maxEval = -Infinity;
+                for(let i=0;i<9;i++){
+                    if(!b[i]){
+                        b[i]=ai;
+                        let ev=minimax(b,depth+1,alpha,beta,false);
+                        b[i]="";
+                        maxEval=Math.max(maxEval,ev);
+                        alpha=Math.max(alpha,ev);
+                        if(beta<=alpha)break;
+                    }
+                }
+                return maxEval;
+            } else {
+                let minEval = Infinity;
+                for(let i=0;i<9;i++){
+                    if(!b[i]){
+                        b[i]=human;
+                        let ev=minimax(b,depth+1,alpha,beta,true);
+                        b[i]="";
+                        minEval=Math.min(minEval,ev);
+                        beta=Math.min(beta,ev);
+                        if(beta<=alpha)break;
+                    }
+                }
+                return minEval;
+            }
+        }
+
+        function resetGame() {
+            board.fill("");
+            cells.forEach(c=>{c.innerText="";c.className="cell";});
+            boardEl.classList.remove('vibrate','threat-active');
+            document.body.style.backgroundColor="#020617";
+            statusDisplay.classList.remove('danger');
+            startToss();
+        }
+
+        resetBtn.addEventListener('click', resetGame);
+        cells.forEach(c=>c.addEventListener('click',handleCellClick));
+    </script>
 </body>
 </html>
